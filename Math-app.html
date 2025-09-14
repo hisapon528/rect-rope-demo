@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Math App Starter</title>
+  <!-- Tailwind (play CDN for quick prototyping) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- MathJax for LaTeX rendering -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [["$","$"],["\\(","\\)"]] } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    html,body{height:100%;}
+    canvas { image-rendering: crisp-edges; }
+    input[type="range"] { width: 100%; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900">
+  <header class="p-4 md:p-6 border-b bg-white sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+      <h1 class="text-xl md:text-2xl font-bold">Math App Starter</h1>
+      <nav class="text-sm md:text-base text-gray-600">
+        <a class="hover:underline" href="#how-to">使い方</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-4 md:p-6 grid md:grid-cols-[340px,1fr] gap-6">
+    <!-- Control Panel -->
+    <section class="bg-white rounded-2xl shadow p-4 md:p-5 space-y-4">
+      <h2 class="font-semibold text-lg">コントロール</h2>
+
+      <div class="space-y-3">
+        <label class="block text-sm font-medium">関数タイプ</label>
+        <select id="fnType" class="w-full rounded-lg border-gray-300">
+          <option value="quadratic">二次関数 y = ax² + bx + c</option>
+          <option value="linear">一次関数 y = mx + n</option>
+        </select>
+      </div>
+
+      <div id="paramsQuadratic" class="space-y-4">
+        <div>
+          <label class="block text-sm">a: <span id="valA" class="font-mono">1.0</span></label>
+          <input id="a" type="range" min="-5" max="5" step="0.1" value="1" />
+        </div>
+        <div>
+          <label class="block text-sm">b: <span id="valB" class="font-mono">0.0</span></label>
+          <input id="b" type="range" min="-10" max="10" step="0.1" value="0" />
+        </div>
+        <div>
+          <label class="block text-sm">c: <span id="valC" class="font-mono">0.0</span></label>
+          <input id="c" type="range" min="-10" max="10" step="0.1" value="0" />
+        </div>
+      </div>
+
+      <div id="paramsLinear" class="space-y-4 hidden">
+        <div>
+          <label class="block text-sm">m: <span id="valM" class="font-mono">1.0</span></label>
+          <input id="m" type="range" min="-10" max="10" step="0.1" value="1" />
+        </div>
+        <div>
+          <label class="block text-sm">n: <span id="valN" class="font-mono">0.0</span></label>
+          <input id="n" type="range" min="-10" max="10" step="0.1" value="0" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 border-t pt-4">
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input id="showGrid" type="checkbox" class="rounded" checked /> グリッド
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input id="showAxis" type="checkbox" class="rounded" checked /> 座標軸
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input id="showCrosshair" type="checkbox" class="rounded" /> クロスヘア
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input id="domainEnabled" type="checkbox" class="rounded" /> 定義域を有効
+        </label>
+      </div>
+
+      <div id="domainBox" class="space-y-3 hidden">
+        <div>
+          <label class="block text-sm">x 最小: <span id="valXmin" class="font-mono">-5</span></label>
+          <input id="xmin" type="range" min="-20" max="19" step="0.5" value="-5" />
+        </div>
+        <div>
+          <label class="block text-sm">x 最大: <span id="valXmax" class="font-mono">5</span></label>
+          <input id="xmax" type="range" min="-19" max="20" step="0.5" value="5" />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 pt-2">
+        <button id="resetView" class="px-3 py-2 rounded-xl bg-gray-900 text-white text-sm">表示をリセット</button>
+        <button id="copyLatex" class="px-3 py-2 rounded-xl bg-gray-200 text-sm">式をLaTeXでコピー</button>
+      </div>
+
+      <p class="text-sm text-gray-600 pt-2">現在の関数： <span id="formula" class="font-mono"></span></p>
+      <p class="text-sm text-gray-600">（ドラッグで移動、ホイールで拡大縮小）</p>
+    </section>
+
+    <!-- Canvas Panel -->
+    <section class="bg-white rounded-2xl shadow p-2 md:p-4">
+      <div class="relative">
+        <canvas id="plot" width="900" height="600" class="w-full h-auto rounded-xl border"></canvas>
+        <div id="tooltip" class="hidden absolute left-2 top-2 text-xs bg-white/90 backdrop-blur px-2 py-1 rounded-md shadow"></div>
+      </div>
+    </section>
+  </main>
+
+  <section id="how-to" class="max-w-5xl mx-auto p-4 md:p-6 text-sm text-gray-700">
+    <h2 class="font-semibold text-lg mb-2">GitHub Pages で公開するには</h2>
+    <ol class="list-decimal pl-5 space-y-1">
+      <li>GitHubで新しいリポジトリを作成し、この <code>index.html</code> をアップロード。</li>
+      <li>Settings → Pages → Build and deployment で <em>Deploy from a branch</em> を選択。</li>
+      <li>Branch に <code>main</code> / <code>root</code> を指定して保存すると、数分で公開URLが発行されます。</li>
+    </ol>
+  </section>
+
+  <script>
+    // --- State ---
+    const state = {
+      // world coords
+      xMin: -10, xMax: 10, yMin: -6, yMax: 6,
+      // function
+      type: 'quadratic', a:1, b:0, c:0, m:1, n:0,
+      showGrid:true, showAxis:true, showCross:false,
+      domainEnabled:false, domain:[-5,5],
+    };
+
+    // --- DOM ---
+    const canvas = document.getElementById('plot');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    const fnType = document.getElementById('fnType');
+    const paramsQuadratic = document.getElementById('paramsQuadratic');
+    const paramsLinear = document.getElementById('paramsLinear');
+
+    const a = document.getElementById('a');
+    const b = document.getElementById('b');
+    const c = document.getElementById('c');
+    const m = document.getElementById('m');
+    const n = document.getElementById('n');
+
+    const showGrid = document.getElementById('showGrid');
+    const showAxis = document.getElementById('showAxis');
+    const showCrosshair = document.getElementById('showCrosshair');
+    const domainEnabled = document.getElementById('domainEnabled');
+    const domainBox = document.getElementById('domainBox');
+    const xmin = document.getElementById('xmin');
+    const xmax = document.getElementById('xmax');
+
+    const formula = document.getElementById('formula');
+
+    // --- Helpers ---
+    function worldToScreen(x, y){
+      const w = canvas.width, h = canvas.height;
+      const sx = (x - state.xMin) / (state.xMax - state.xMin) * w;
+      const sy = h - (y - state.yMin) / (state.yMax - state.yMin) * h;
+      return [sx, sy];
+    }
+    function screenToWorld(sx, sy){
+      const w = canvas.width, h = canvas.height;
+      const x = state.xMin + (sx / w) * (state.xMax - state.xMin);
+      const y = state.yMin + ((h - sy) / h) * (state.yMax - state.yMin);
+      return [x, y];
+    }
+
+    function f(x){
+      if(state.type==='quadratic') return state.a*x*x + state.b*x + state.c;
+      if(state.type==='linear') return state.m*x + state.n;
+      return 0;
+    }
+
+    function clampDomain(){
+      let lo = Math.min(parseFloat(xmin.value), parseFloat(xmax.value));
+      let hi = Math.max(parseFloat(xmin.value), parseFloat(xmax.value));
+      if(hi - lo < 0.1){ hi = lo + 0.1; }
+      state.domain = [lo, hi];
+      document.getElementById('valXmin').textContent = lo;
+      document.getElementById('valXmax').textContent = hi;
+    }
+
+    function updateFormula(){
+      let tex = '';
+      if(state.type==='quadratic'){
+        const a = state.a, b = state.b, c = state.c;
+        // Build pretty TeX for ax^2+bx+c
+        const A = (a===1)?'':(a===-1?'-':'{'+a+'}');
+        const B = (b===0)?'': (b>0?'+':'') + (Math.abs(b)===1?'':Math.abs(b)) + 'x';
+        const C = (c===0)?'': (c>0?'+':'') + Math.abs(c);
+        tex = `y = ${A}x^2${B}${C}`;
+      } else {
+        const m = state.m, n = state.n;
+        const M = (m===1)?'':(m===-1?'-':'{'+m+'}');
+        const N = (n===0)?'': (n>0?'+':'') + Math.abs(n);
+        tex = `y = ${M}x${N}`;
+      }
+      if(state.domainEnabled){
+        tex += `\\;\\;(${state.domain[0]} \\le x \\le ${state.domain[1]})`;
+      }
+      formula.textContent = tex.replaceAll('\\','');
+      MathJax.typesetPromise();
+    }
+
+    // --- Drawing ---
+    function draw(){
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0,0,w,h);
+
+      // grid
+      if(state.showGrid){
+        ctx.save();
+        ctx.lineWidth = 1; ctx.strokeStyle = '#e5e7eb';
+        const xStep = 1, yStep = 1;
+        for(let x=Math.ceil(state.xMin); x<=state.xMax; x+=xStep){
+          const [sx] = worldToScreen(x,0);
+          ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,h); ctx.stroke();
+        }
+        for(let y=Math.ceil(state.yMin); y<=state.yMax; y+=yStep){
+          const [,sy] = worldToScreen(0,y);
+          ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(w,sy); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // axes
+      if(state.showAxis){
+        ctx.save();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#9ca3af';
+        const [sx0,sy0] = worldToScreen(0,0);
+        // x-axis
+        ctx.beginPath(); ctx.moveTo(0, sy0); ctx.lineTo(w, sy0); ctx.stroke();
+        // y-axis
+        ctx.beginPath(); ctx.moveTo(sx0, 0); ctx.lineTo(sx0, h); ctx.stroke();
+        ctx.restore();
+      }
+
+      // function curve
+      const steps = w; // one sample per pixel
+      const ptsInside = [];
+      const ptsOutside = [];
+      for(let i=0;i<=steps;i++){
+        const x = state.xMin + i/steps*(state.xMax-state.xMin);
+        const y = f(x);
+        const [sx,sy] = worldToScreen(x,y);
+        const inside = !state.domainEnabled || (x>=state.domain[0] && x<=state.domain[1]);
+        (inside?ptsInside:ptsOutside).push([sx,sy]);
+      }
+
+      function strokePath(pts, dash=false){
+        if(pts.length<2) return;
+        ctx.save();
+        ctx.lineWidth = 2;
+        if(dash) ctx.setLineDash([6,6]);
+        ctx.strokeStyle = dash? '#9ca3af' : '#111827';
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+        ctx.restore();
+      }
+      strokePath(ptsOutside, true);
+      strokePath(ptsInside, false);
+
+      // crosshair
+      if(state.showCross && lastMouse){
+        const [x,y] = screenToWorld(lastMouse.x,lastMouse.y);
+        const [sx,sy] = worldToScreen(x, f(x));
+        ctx.save();
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle = '#10b981';
+        ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(w,sy); ctx.stroke();
+        ctx.restore();
+
+        tooltip.classList.remove('hidden');
+        tooltip.style.transform = `translate(${sx+8}px, ${sy-24}px)`;
+        tooltip.textContent = `x=${x.toFixed(2)}, y=${f(x).toFixed(2)}`;
+      } else {
+        tooltip.classList.add('hidden');
+      }
+    }
+
+    // --- Panning & Zooming ---
+    let dragging=false, lastMouse=null;
+    canvas.addEventListener('mousedown', e=>{ dragging=true; lastMouse={x:e.offsetX,y:e.offsetY}; });
+    canvas.addEventListener('mouseup', ()=>{ dragging=false; });
+    canvas.addEventListener('mouseleave', ()=>{ dragging=false; lastMouse=null; draw(); });
+    canvas.addEventListener('mousemove', e=>{
+      if(dragging){
+        const dx = e.offsetX - lastMouse.x;
+        const dy = e.offsetY - lastMouse.y;
+        const scaleX = (state.xMax-state.xMin)/canvas.width;
+        const scaleY = (state.yMax-state.yMin)/canvas.height;
+        state.xMin -= dx*scaleX; state.xMax -= dx*scaleX;
+        state.yMin += dy*scaleY; state.yMax += dy*scaleY;
+        lastMouse = {x:e.offsetX, y:e.offsetY};
+        draw();
+      } else {
+        lastMouse = {x:e.offsetX, y:e.offsetY};
+        if(state.showCross) draw();
+      }
+    });
+    canvas.addEventListener('wheel', e=>{
+      e.preventDefault();
+      const factor = Math.pow(1.1, e.deltaY>0?1:-1);
+      const [mx,my] = screenToWorld(e.offsetX,e.offsetY);
+      const zx = (state.xMax - state.xMin)*factor;
+      const zy = (state.yMax - state.yMin)*factor;
+      state.xMin = mx - zx*( (mx-state.xMin)/(state.xMax-state.xMin) );
+      state.xMax = state.xMin + zx;
+      state.yMin = my - zy*( (my-state.yMin)/(state.yMax-state.yMin) );
+      state.yMax = state.yMin + zy;
+      draw();
+    }, {passive:false});
+
+    // --- UI Wiring ---
+    function syncVals(){
+      document.getElementById('valA').textContent = a.value;
+      document.getElementById('valB').textContent = b.value;
+      document.getElementById('valC').textContent = c.value;
+      document.getElementById('valM').textContent = m.value;
+      document.getElementById('valN').textContent = n.value;
+    }
+
+    [a,b,c,m,n].forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        state.a=parseFloat(a.value); state.b=parseFloat(b.value); state.c=parseFloat(c.value);
+        state.m=parseFloat(m.value); state.n=parseFloat(n.value);
+        syncVals(); updateFormula(); draw();
+      });
+    });
+
+    fnType.addEventListener('change', ()=>{
+      state.type = fnType.value;
+      paramsQuadratic.classList.toggle('hidden', state.type!=="quadratic");
+      paramsLinear.classList.toggle('hidden', state.type!=="linear");
+      updateFormula(); draw();
+    });
+
+    showGrid.addEventListener('change', ()=>{ state.showGrid = showGrid.checked; draw(); });
+    showAxis.addEventListener('change', ()=>{ state.showAxis = showAxis.checked; draw(); });
+    showCrosshair.addEventListener('change', ()=>{ state.showCross = showCrosshair.checked; draw(); });
+
+    domainEnabled.addEventListener('change', ()=>{
+      state.domainEnabled = domainEnabled.checked;
+      domainBox.classList.toggle('hidden', !state.domainEnabled);
+      clampDomain(); updateFormula(); draw();
+    });
+    [xmin,xmax].forEach(el=>el.addEventListener('input', ()=>{ clampDomain(); updateFormula(); draw(); }));
+
+    document.getElementById('resetView').addEventListener('click', ()=>{
+      state.xMin = -10; state.xMax = 10; state.yMin = -6; state.yMax = 6; draw();
+    });
+
+    document.getElementById('copyLatex').addEventListener('click', async ()=>{
+      const t = formula.textContent;
+      try{ await navigator.clipboard.writeText(t); alert('LaTeXをコピーしました: '+t); }
+      catch{ alert('コピーに失敗しました'); }
+    });
+
+    // init
+    syncVals(); clampDomain(); updateFormula(); draw();
+  </script>
+
+  <!--
+  開発メモ：
+  - ここに今後の機能（例：ルーブリック表示、場合分け、最小値自動計算、GeoJSON/CSV読み込み、極値や交点の自動表示、等）を追加可能。
+  - 1ファイル完結なので GitHub Pages でそのまま公開できます。
+  -->
+</body>
+</html>
